@@ -187,10 +187,10 @@ class ChefAPI(object):
     def __exit__(self, type, value, traceback):
         del api_stack_value()[-1]
 
-    def _request(self, method, url, data, headers):
-        return requests.api.request(method, url, headers=headers, data=data, verify=self.ssl_verify)
+    def _request(self, method, url, data, headers, params=None):
+        return requests.api.request(method, url, headers=headers, data=data, params=params, verify=self.ssl_verify)
 
-    def request(self, method, path, headers={}, data=None):
+    def request(self, method, path, headers={}, data=None, params=None):
         auth_headers = sign_request(key=self.key, http_method=method,
             path=self.parsed_url.path+path.split('?', 1)[0], body=data,
             host=self.parsed_url.netloc, timestamp=datetime.datetime.utcnow(),
@@ -202,7 +202,7 @@ class ChefAPI(object):
         request_headers.update(auth_headers)
         try:
             response = self._request(method, self.url + path, data, dict(
-                (k.capitalize(), v) for k, v in six.iteritems(request_headers)))
+                (k.capitalize(), v) for k, v in six.iteritems(request_headers)), params=params)
         except requests.ConnectionError as e:
             raise ChefServerError(e.message)
 
@@ -211,13 +211,13 @@ class ChefAPI(object):
 
         return response
 
-    def api_request(self, method, path, headers={}, data=None):
+    def api_request(self, method, path, headers={}, data=None, params=None):
         headers = dict((k.lower(), v) for k, v in six.iteritems(headers))
         headers['accept'] = 'application/json'
         if data is not None:
             headers['content-type'] = 'application/json'
             data = json.dumps(data)
-        response = self.request(method, path, headers, data)
+        response = self.request(method, path, headers, data, params=params)
         return response.json()
 
     def __getitem__(self, path):
